@@ -281,23 +281,25 @@ User Service Swagger UI: http://localhost:8000/docs
 
 Notification Service Swagger UI: http://localhost:8001/docs
 
-Полезные ссылки
-Docker документация
+```
+# Полезные ссылки
+Docker документация: https://docs.docker.com/
 
-FastAPI документация
+FastAPI документация: https://fastapi.tiangolo.com/
 
-RabbitMQ документация
+RabbitMQ документация: https://www.rabbitmq.com/documentation.html
 
-PostgreSQL документация
+PostgreSQL документация: https://www.postgresql.org/docs/
 
-Файлы проекта
+
+# Файлы проекта
 Postman коллекция - импортируйте в Postman
 
 docker-compose.yml - конфигурация Docker Compose
 
-Разработка
+# Разработка
 Локальная разработка
-bash
+```bash
 # Запустить все зависимости (без сервисов)
 docker-compose up -d rabbitmq db_user_service
 
@@ -307,15 +309,17 @@ python -m venv venv
 source venv/Scripts/activate  # или .\venv\Scripts\activate.ps1 в PowerShell
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
-Добавление нового сервиса
+```
+# Добавление нового сервиса
 Создайте папку с сервисом
 
 Добавьте Dockerfile и requirements.txt
 
 Обновите docker-compose.yml
 
-Протестируйте: docker-compose up --build <service_name>
-```
+Протестируйте: 
+```docker-compose up --build <service_name>```
+
 # Лицензия:
 Учебный проект, выполненный в рамках практического задания по микросервисной архитектуре.
 
