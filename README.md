@@ -217,7 +217,7 @@ Content-Type: application/json
 1. Полный тест через Python скрипт
 ```
 powershell
-python test_full_chain.py
+py test_full_chain.py
 ```
 
 2. Индивидуальные тесты через curl
@@ -332,7 +332,7 @@ docker-compose up -d rabbitmq db_user_service
 
 # Запустить сервис в режиме разработки
 cd user_service
-python -m venv venv
+py -m venv venv
 source venv/Scripts/activate  # или .\venv\Scripts\activate.ps1 в PowerShell
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
