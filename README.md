@@ -1,88 +1,228 @@
 # TaskHub - Микросервисная система уведомлений
 
-## Описание проекта
-Упрощенная версия системы TaskHub, состоящая из трех микросервисов:
-1. **User Service** - REST API для управления пользователями
-2. **Notification Service** - Сервис уведомлений через RabbitMQ
-3. **Email Worker** - Фоновый процесс для "отправки" email
+## О проекте
+Учебный проект по разработке микросервисной системы на базе Docker, FastAPI, RabbitMQ и PostgreSQL.
 
-## Архитектура
+## Архитектура системы
 
-```mermaid
-graph TD
-    A[Клиент] -->|POST /users/| B[User Service]
-    B -->|Сохраняет в| C[(PostgreSQL)]
-    B -->|Асинхронный HTTP вызов| D[Notification Service]
-    D -->|Публикует событие| E[(RabbitMQ)]
-    F[Email Worker] -->|Подписан на очередь| E
-    F -->|Имитация отправки| G[Лог/Консоль]
+### Схема взаимодействия:
+┌─────────────┐ HTTP ┌──────────────┐ SQL ┌─────────────┐
 
-    Технологический стек
-Backend: Python, FastAPI
+│ Клиент ├─────────────►│ User Service ├────────────►│ PostgreSQL │
 
-Message Broker: RabbitMQ
+│ (Postman, │ │ :8000 │ │ :5432 │
 
-Database: PostgreSQL
+│ curl) │◄─────────────┤ │◄────────────┤ │
 
-Containerization: Docker, Docker Compose
+└─────────────┘ └──────┬───────┘ └─────────────┘
 
-API Documentation: Swagger/OpenAPI
+│
 
-Структура проекта
+│ HTTP
+
+▼
+
+┌────────────────────┐ AMQP ┌─────────────┐
+
+│ Notification ├─────────────►│ RabbitMQ │
+
+│ Service │ │ :5672 │
+
+│ :8001 │◄─────────────┤ (очередь) │
+
+└────────────────────┘ └──────┬──────┘
+
+│
+
+│ AMQP
+
+▼
+
+┌────────────────────┐
+
+│ Email Worker │
+
+│ (фоновый процесс) │
+
+└────────────────────┘
+
+│
+
+▼
+
+┌────────────────────┐
+
+│ Логирование │
+
+│ (консоль) │
+
+└────────────────────┘
+
+
+## Технологический стек
+
+| Компонент               | Технология               | Назначение                     |
+|-------------------------|--------------------------|--------------------------------|
+| **User Service**        | Python, FastAPI, Pydantic| REST API для управления пользователями |
+| **Notification Service**| Python, FastAPI, Pika    | Отправка сообщений в RabbitMQ  |
+| **Email Worker**        | Python, Pika             | Обработка сообщений из очереди |
+| **База данных**         | PostgreSQL               | Хранение данных пользователей  |
+| **Message Broker**      | RabbitMQ                 | Асинхронная очередь сообщений  |
+| **Контейнеризация**     | Docker, Docker Compose   | Изоляция и управление сервисами|
+
+## Структура проекта
 taskhub-notification-system/
-├── user_service/          # Сервис пользователей
-├── notification_service/  # Сервис уведомлений
-├── email_worker/          # Фоновый обработчик
-├── docker-compose.yml     # Конфигурация Docker
-└── README.md              # Документация
-Запуск системы
-Требования
--Docker Desktop
--Git
+├── user_service/ # Сервис пользователей (порт 8000)
 
-Установка и запуск
-bash
-# 1. Клонировать репозиторий
+│ ├── app/
+│ │ ├── main.py # Основное приложение FastAPI
+
+│ │ ├── database.py # Подключение к PostgreSQL
+
+│ │ └── models.py # Модели SQLAlchemy
+
+│ ├── requirements.txt # Зависимости Python
+
+│ └── Dockerfile # Конфигурация Docker
+
+│
+
+├── notification_service/ # Сервис уведомлений (порт 8001)
+
+│ ├── app/
+
+│ │ └── main.py # FastAPI + RabbitMQ клиент
+
+│ ├── requirements.txt
+
+│ └── Dockerfile
+
+│
+
+├── email_worker/ # Фоновый обработчик писем
+
+│ ├── app/
+
+│ │ └── main.py # Consumer RabbitMQ
+
+│ ├── requirements.txt
+
+│ └── Dockerfile
+
+│
+
+├── docker-compose.yml # Конфигурация всех сервисов
+
+├── docker-compose.yml # Конфигурация Docker Compose
+
+├── README.md # Эта документация
+
+├── TaskHub_Postman_Collection.json # Коллекция Postman
+
+└── test_full_chain.py # Тестовый скрипт Python
+
+
+## Быстрый старт
+
+### Предварительные требования
+- **Docker Desktop** (с WSL2 на Windows)
+- **Git**
+- **Python 3.11+** (для локальных тестов)
+
+### Установка и запуск
+
+```bash
+# 1. Клонируйте репозиторий
 git clone <ваш-репозиторий>
-
-# 2. Перейти в папку проекта
 cd taskhub-notification-system
 
-# 3. Запустить все сервисы
+# 2. Запустите все сервисы
 docker-compose up --build
 
-# 4. Система будет доступна на портах:
-#    - User Service: http://localhost:8000
-#    - Notification Service: http://localhost:8001
-#    - RabbitMQ UI: http://localhost:15672 (guest/guest)
+# 3. Откройте новый терминал для тестирования
 
-Примеры использования
-1. Создание пользователя
-bash
-curl -X POST http://localhost:8000/users/ \
-  -H "Content-Type: application/json" \
-  -d '{"email": "test@example.com", "name": "Test User"}'
-2. Получение списка пользователей
-bash
-curl http://localhost:8000/users/
-3. Проверка здоровья сервисов
-bash
+# 4. Проверьте работоспособность
 curl http://localhost:8000/health
 curl http://localhost:8001/health
 
-4. Прямая отправка уведомления
-bash
-curl -X POST http://localhost:8001/notify \
+# 5. Создайте тестового пользователя
+curl -X POST "http://localhost:8000/users/" \
   -H "Content-Type: application/json" \
-  -d '{"email": "test@example.com", "message": "Test Message"}'
+  -d '{"email": "test@example.com", "name": "Test User"}'
 
-  API Документация
-User Service Swagger UI: http://localhost:8000/docs
+# 6. Проверьте создание
+curl http://localhost:8000/users/
 
-Notification Service Swagger UI: http://localhost:8001/docs
+Доступ к сервисам
+После запуска система доступна по следующим адресам:
 
-Наблюдение за системой
-Логи сервисов
+Сервис	URL	Назначение
+User Service API	http://localhost:8000	Основной REST API
+
+Swagger UI	http://localhost:8000/docs	Интерактивная документация API
+
+Notification Service	http://localhost:8001	API уведомлений
+
+RabbitMQ Management	http://localhost:15672	Веб-интерфейс RabbitMQ
+
+Health Check	http://localhost:8000/health	Проверка работоспособности
+
+Данные для входа в RabbitMQ:
+
+Логин: guest
+
+Пароль: guest
+
+Основные API endpoints
+User Service (порт 8000)
+http
+POST /users/
+Content-Type: application/json
+
+{
+    "email": "user@example.com",
+    "name": "Имя Фамилия"
+}
+http
+GET /users/
+Возвращает список всех пользователей.
+
+http
+GET /health
+Проверка работоспособности сервиса.
+
+Notification Service (порт 8001)
+http
+POST /notify
+Content-Type: application/json
+
+{
+    "email": "user@example.com",
+    "message": "Текст уведомления"
+}
+Тестирование
+1. Полный тест через Python скрипт
+powershell
+python test_full_chain.py
+2. Индивидуальные тесты через curl
+bash
+# Проверка здоровья
+curl http://localhost:8000/health
+curl http://localhost:8001/health
+
+# Создание пользователя
+curl -X POST "http://localhost:8000/users/" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "test@test.com", "name": "Test"}'
+
+# Получение списка пользователей
+curl http://localhost:8000/users/
+
+# Прямая отправка уведомления
+curl -X POST "http://localhost:8001/notify" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "test@test.com", "message": "Test"}'
+3. Мониторинг логов
 bash
 # Просмотр логов всех сервисов
 docker-compose logs -f
@@ -90,68 +230,94 @@ docker-compose logs -f
 # Логи конкретного сервиса
 docker-compose logs -f user_service
 docker-compose logs -f email_worker
-Мониторинг RabbitMQ
-RabbitMQ Management UI: http://localhost:15672
+Поиск и устранение неисправностей
+Проблема	Решение
+Ошибка портов	Убедитесь, что порты 8000, 8001, 15672 свободны
+RabbitMQ не подключается	Проверьте docker-compose logs rabbitmq
+PostgreSQL недоступен	Подождите 10-15 секунд после запуска
+Нет логов email_worker	Проверьте буферизацию: в Dockerfile добавьте -u к python
+422 ошибка в Postman	Проверьте заголовок Content-Type: application/json
+Мониторинг
+RabbitMQ Management
+Откройте http://localhost:15672 для мониторинга очередей:
 
-Логин: guest, Пароль: guest
+Перейдите на вкладку Queues
 
-Проверьте очередь email_queue во вкладке Queues
+Найдите очередь email_queue
 
-Тестирование
-Для запуска тестового сценария:
-powershell
-python test_full_chain.py
+Проверьте:
 
+Consumers (должен быть 1)
+
+Messages (количество сообщений в очереди)
+
+Docker контейнеры
 bash
-# Остановка с удалением контейнеров
+# Статус всех контейнеров
+docker-compose ps
+
+# Статистика использования ресурсов
+docker stats
+
+# Просмотр логов в реальном времени
+docker-compose logs -f
+Остановка системы
+bash
+# Остановить с сохранением данных
 docker-compose down
 
-# Остановка с удалением контейнеров и томов
+# Остановить и удалить все данные
 docker-compose down -v
 
+# Остановить конкретный сервис
+docker-compose stop user_service
+
+# Перезапустить сервис
+docker-compose restart email_worker
+Документация и ссылки
+API документация
+User Service Swagger UI: http://localhost:8000/docs
+
+Notification Service Swagger UI: http://localhost:8001/docs
+
+Полезные ссылки
+Docker документация
+
+FastAPI документация
+
+RabbitMQ документация
+
+PostgreSQL документация
+
+Файлы проекта
+Postman коллекция - импортируйте в Postman
+
+docker-compose.yml - конфигурация Docker Compose
+
 Разработка
-Для разработки и отладки:
-
+Локальная разработка
 bash
-# Пересобрать конкретный сервис
-docker-compose build user_service
+# Запустить все зависимости (без сервисов)
+docker-compose up -d rabbitmq db_user_service
 
-# Запустить только определенные сервисы
-docker-compose up -d rabbitmq notification_service
+# Запустить сервис в режиме разработки
+cd user_service
+python -m venv venv
+source venv/Scripts/activate  # или .\venv\Scripts\activate.ps1 в PowerShell
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+Добавление нового сервиса
+Создайте папку с сервисом
 
-# Зайти внутрь контейнера
-docker-compose exec user_service sh
+Добавьте Dockerfile и requirements.txt
 
-## Postman Collection
+Обновите docker-compose.yml
 
-Для тестирования API доступна Postman коллекция:
-
-1. Скачайте файл [TaskHub_Postman_Collection.json](TaskHub_Postman_Collection.json)
-2. Импортируйте в Postman: File → Import → Выберите файл
-3. Все запросы готовы к использованию
-
-## Архитектура системы
-
-```mermaid
-graph TB
-    Client[Клиент] -->|HTTP REST API| UserService[User Service :8000]
-    UserService -->|SQL| PostgreSQL[(PostgreSQL<br/>База данных)]
-    UserService -->|HTTP POST| NotificationService[Notification Service :8001]
-    NotificationService -->|AMQP| RabbitMQ[(RabbitMQ<br/>Очередь сообщений)]
-    RabbitMQ -->|Сообщения| EmailWorker[Email Worker]
-    EmailWorker -->|Логирование| Console[Консоль Docker]
-    
-    style Client fill:#e1f5fe,stroke:#01579b
-    style UserService fill:#f3e5f5,stroke:#4a148c
-    style PostgreSQL fill:#e8f5e8,stroke:#1b5e20
-    style NotificationService fill:#f3e5f5,stroke:#4a148c
-    style RabbitMQ fill:#fff3e0,stroke:#e65100
-    style EmailWorker fill:#fce4ec,stroke:#880e4f
-    style Console fill:#f5f5f5,stroke:#616161
+Протестируйте: docker-compose up --build <service_name>
 ```
+# Лицензия:
+Учебный проект, выполненный в рамках практического задания по микросервисной архитектуре.
 
-Автор
-[Передеренко Никита Вячеславович; Магистратура; Прикладная информатика 2 курс/НВРС24-М-ЦР02]
+# Автор:
+[Передеренко Никита Вячеславович; Магистратура; Прикладная информатика 2 курс] [НВРС24-М-ЦР02]
 
-Лицензия
-Учебный проект
