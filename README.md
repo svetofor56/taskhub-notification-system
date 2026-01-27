@@ -153,8 +153,9 @@ curl -X POST "http://localhost:8000/users/" \
 
 # 6. Проверьте создание
 curl http://localhost:8000/users/
+```
 
-Доступ к сервисам
+### Доступ к сервисам
 После запуска система доступна по следующим адресам:
 
 Сервис	URL	Назначение
@@ -174,8 +175,10 @@ Health Check	http://localhost:8000/health	Проверка работоспос�
 
 Пароль: guest
 
-Основные API endpoints
+# Основные API endpoints
+
 User Service (порт 8000)
+```
 http
 POST /users/
 Content-Type: application/json
@@ -185,14 +188,21 @@ Content-Type: application/json
     "name": "Имя Фамилия"
 }
 http
+```
+
+```
 GET /users/
 Возвращает список всех пользователей.
+```
 
+```
 http
 GET /health
 Проверка работоспособности сервиса.
+```
 
 Notification Service (порт 8001)
+```
 http
 POST /notify
 Content-Type: application/json
@@ -201,20 +211,28 @@ Content-Type: application/json
     "email": "user@example.com",
     "message": "Текст уведомления"
 }
-Тестирование
+```
+
+# Тестирование
 1. Полный тест через Python скрипт
+```
 powershell
 python test_full_chain.py
+```
+
 2. Индивидуальные тесты через curl
-bash
+```bash
 # Проверка здоровья
 curl http://localhost:8000/health
 curl http://localhost:8001/health
 
+
 # Создание пользователя
+
 curl -X POST "http://localhost:8000/users/" \
   -H "Content-Type: application/json" \
   -d '{"email": "test@test.com", "name": "Test"}'
+
 
 # Получение списка пользователей
 curl http://localhost:8000/users/
@@ -223,22 +241,27 @@ curl http://localhost:8000/users/
 curl -X POST "http://localhost:8001/notify" \
   -H "Content-Type: application/json" \
   -d '{"email": "test@test.com", "message": "Test"}'
+```
+
 3. Мониторинг логов
-bash
+```bash
 # Просмотр логов всех сервисов
 docker-compose logs -f
 
 # Логи конкретного сервиса
 docker-compose logs -f user_service
 docker-compose logs -f email_worker
-Поиск и устранение неисправностей
+```
+
+# Поиск и устранение неисправностей
 Проблема	Решение
 Ошибка портов	Убедитесь, что порты 8000, 8001, 15672 свободны
 RabbitMQ не подключается	Проверьте docker-compose logs rabbitmq
 PostgreSQL недоступен	Подождите 10-15 секунд после запуска
 Нет логов email_worker	Проверьте буферизацию: в Dockerfile добавьте -u к python
 422 ошибка в Postman	Проверьте заголовок Content-Type: application/json
-Мониторинг
+
+# Мониторинг
 RabbitMQ Management
 Откройте http://localhost:15672 для мониторинга очередей:
 
@@ -252,8 +275,8 @@ Consumers (должен быть 1)
 
 Messages (количество сообщений в очереди)
 
-Docker контейнеры
-bash
+# Docker контейнеры
+```bash
 # Статус всех контейнеров
 docker-compose ps
 
@@ -262,8 +285,10 @@ docker stats
 
 # Просмотр логов в реальном времени
 docker-compose logs -f
-Остановка системы
-bash
+
+```
+# Остановка системы
+```bash
 # Остановить с сохранением данных
 docker-compose down
 
@@ -275,13 +300,15 @@ docker-compose stop user_service
 
 # Перезапустить сервис
 docker-compose restart email_worker
-Документация и ссылки
+```
+
+# Документация и ссылки
 API документация
 User Service Swagger UI: http://localhost:8000/docs
 
 Notification Service Swagger UI: http://localhost:8001/docs
 
-```
+
 # Полезные ссылки
 Docker документация: https://docs.docker.com/
 
