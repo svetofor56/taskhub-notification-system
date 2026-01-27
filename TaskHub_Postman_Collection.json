@@ -1,0 +1,159 @@
+{
+  "info": {
+    "_postman_id": "808a68a3-8e65-4406-8698-5f747659edb0",
+    "name": "TaskHub Notification System",
+    "description": "```\nКоллекция для тестирования микросервисов TaskHub.\nUser Service порт: 8000\nNotification Service порт: 8001\n\n ```",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "51871878"
+  },
+  "item": [
+    {
+      "name": "Health Checks",
+      "item": [
+        {
+          "name": "Health Check User Service",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/health",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "health"
+              ]
+            },
+            "description": "Проверка работоспособности User Service"
+          },
+          "response": []
+        },
+        {
+          "name": "Health Check Notification Service",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8001/health",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8001",
+              "path": [
+                "health"
+              ]
+            },
+            "description": "Проверка работоспособности Notification Service"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "User Management",
+      "item": [
+        {
+          "name": "Create User",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"jdsadkj@example.com\",\r\n\"name\": \"Test User\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8000/users/",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "users",
+                ""
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Users",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8000/users/",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8000",
+              "path": [
+                "users",
+                ""
+              ]
+            },
+            "description": "Получение списка всех пользователей"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "Send Notification",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"jdsadkj@example.com\",\r\n  \"message\": \"Test notification message\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8001/notify",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8001",
+              "path": [
+                "notify"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

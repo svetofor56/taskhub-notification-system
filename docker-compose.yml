@@ -1,0 +1,81 @@
+
+services:
+  # Сервис 1: User Service (PostgreSQL + FastAPI)
+  db_user_service:
+    image: postgres:15-alpine
+    container_name: db_user_service
+    environment:
+      POSTGRES_DB: user_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d user_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  user_service:
+    build: ./user_service
+    container_name: user_service
+    ports:
+      - "8000:8000"  # Открываем порт для тестов
+    depends_on:
+      db_user_service:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://user:password@db_user_service:5432/user_db
+    networks:
+      - app-network
+
+  # Сервис 2: Notification Service (FastAPI + RabbitMQ)
+  notification_service:
+    build: ./notification_service
+    container_name: notification_service
+    ports:
+      - "8001:8001"  # Открываем порт для тестов
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  # Сервис 3: Email Worker (Consumer RabbitMQ)
+  email_worker:
+    build: ./email_worker
+    container_name: email_worker
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  # Message Broker: RabbitMQ
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"   # AMQP протокол
+      - "15672:15672" # Web UI (логин: guest, пароль: guest)
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+volumes:
+  postgres_data:
+
+networks:
+  app-network:
+    driver: bridge
