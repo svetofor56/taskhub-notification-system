@@ -14,11 +14,47 @@
 - Подробное логирование
 
 ## 3. Инструкция по запуску
-[Скопируйте раздел из README.md]
+
+Предварительные требования:
+- **Docker Desktop** (с WSL2 на Windows)
+- **Git**
+- **Python 3.11+** (для локальных тестов)
+
+### Установка и запуск
+
+```bash
+# 1. Клонируйте репозиторий
+git clone <ваш-репозиторий>
+cd taskhub-notification-system
+
+# 2. Запустите все сервисы
+docker-compose up --build
+
+# 3. Откройте новый терминал для тестирования
+
+# 4. Проверьте работоспособность
+curl http://localhost:8000/health
+curl http://localhost:8001/health
+
+# 5. Создайте тестового пользователя
+curl -X POST "http://localhost:8000/users/" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "test@example.com", "name": "Test User"}'
+
+# 6. Проверьте создание
+curl http://localhost:8000/users/
+```
 
 ## 4. Примеры работы
-[Скриншоты или описание тестовых сценариев]
+![Оповещение при запуске системы](docs/sysstart.jpg)
+
+![Проверка работоспособности User Service](docs/userservhealth.jpg)
+
+![Проверка работоспособности Notification Service](docs/notservhealth.jpg)
+
+![Проверка системы регистрации пользователя](docs/userreg.jpg)
+
+![Проверка отправки сообщения](docs/msgsent.jpg)
 
 ## 5. Заключение
 Система успешно реализована и готова к использованию.
-Все критерии оценки выполнены.
