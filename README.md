@@ -4,7 +4,34 @@
 Учебный проект по разработке микросервисной системы на базе Docker, FastAPI, RabbitMQ и PostgreSQL.
 
 ## Архитектура системы
-![Архитектура TaskHub](docs/architecture.md)
+
+```mermaid
+graph TB
+    subgraph "Микросервисы с Retry"
+        US[User Service<br/>:8000<br/>3 попытки] -->|HTTP POST /notify| NS[Notification Service<br/>:8001]
+        NS -->|AMQP| RMQ[RabbitMQ<br/>Очередь: email_queue]
+        RMQ -->|Сообщения| EW[Email Worker<br/>3 попытки]
+        EW -->|Логирование| LOG[Логи Docker]
+    end
+    
+    subgraph "Клиенты"
+        C1[Клиент] -->|HTTP REST API| US
+        C2[Swagger UI] -->|Документация| US
+    end
+    
+    US -->|SQL| DB[(PostgreSQL<br/>База пользователей)]
+    
+    style US fill:#e1f5fe,stroke:#01579b,color:#000000
+    style NS fill:#f3e5f5,stroke:#4a148c,color:#000000
+    style EW fill:#fce4ec,stroke:#880e4f,color:#000000
+    style RMQ fill:#fff3e0,stroke:#e65100,color:#000000
+    style DB fill:#e8f5e8,stroke:#1b5e20,color:#000000
+    style C1 fill:#ffffff,stroke:#333333,color:#000000
+    style C2 fill:#ffffff,stroke:#333333,color:#000000
+    style LOG fill:#f5f5f5,stroke:#666666,color:#000000
+    
+    linkStyle default stroke:#666666,stroke-width:2px,color:#000000
+```
 
 ### Схема взаимодействия:
 ┌─────────────┐ HTTP ┌──────────────┐ SQL ┌─────────────┐
@@ -213,6 +240,65 @@ Content-Type: application/json
 }
 ```
 
+## Механизм повторных попыток (Retry)
+
+### Реализовано в двух местах:
+
+Система реализует надежный механизм повторных попыток при сбоях:
+
+### **В двух местах системы:**
+
+#### **User Service → Notification Service:**
+- **Лимит попыток:** 3
+- **Стратегия задержки:** Экспоненциальная (2, 4, 8 секунд)
+- **Триггер:** Ошибки HTTP или недоступность сервиса
+- **Реализация:** Цикл с обработкой исключений
+
+#### **Email Worker → Обработка сообщений:**
+- **Лимит попыток:** 3
+- **Стратегия задержки:** Экспоненциальная (2, 4, 8 секунд)
+- **Триггер:** Любые ошибки при обработке сообщений
+- **Особенность:** Искусственная ошибка при email с "fail" (для демонстрации)
+
+### Демонстрация механизма Retry
+
+#### Тест 1: Retry при недоступности Notification Service
+```bash
+# Остановите notification_service
+docker-compose stop notification_service
+
+# Создайте пользователя (увидите 3 попытки в логах)
+curl -X POST http://localhost:8000/users/ \
+  -H "Content-Type: application/json" \
+  -d '{"email": "retry_test@example.com", "name": "Test Retry"}'
+
+# Наблюдайте логи retry
+docker-compose logs -f user_service
+```
+
+#### Тест 2: Retry в Email Worker
+```bash
+# Отправьте тестовое сообщение с "fail" в email
+curl -X POST http://localhost:8001/notify \
+  -H "Content-Type: application/json" \
+  -d '{"email": "fail_test@example.com", "message": "Тест retry механизма"}'
+
+# Наблюдайте 3 попытки обработки
+docker-compose logs -f email_worker
+```
+# Ожидаемые логи retry:
+```text
+📤 [USER SERVICE] Попытка 1/3 отправки уведомления...
+❌ [USER SERVICE] Ошибка подключения при попытке 1
+⏱️  [USER SERVICE] Жду 2 сек. перед повторной попыткой...
+📤 [USER SERVICE] Попытка 2/3 отправки уведомления...
+❌ [USER SERVICE] Ошибка подключения при попытке 2
+⏱️  [USER SERVICE] Жду 4 сек. перед повторной попыткой...
+📤 [USER SERVICE] Попытка 3/3 отправки уведомления...
+❌ [USER SERVICE] Ошибка подключения при попытке 3
+🚫 [USER SERVICE] Достигнут лимит 3 попыток
+```
+
 # Тестирование
 1. Полный тест через Python скрипт
 ```
@@ -253,6 +339,56 @@ docker-compose logs -f user_service
 docker-compose logs -f email_worker
 ```
 
+4. Тестирование механизма Retry
+```bash
+# 1. Остановите notification_service
+docker-compose stop notification_service
+
+# 2. Запустите тест retry
+python -c "
+import requests
+print('Testing retry mechanism...')
+try:
+    response = requests.post('http://localhost:8000/users/',
+        json={'email': 'retry_test@example.com', 'name': 'Retry Test'})
+    print(f'Response: {response.status_code}')
+except Exception as e:
+    print(f'Error: {e}')
+"
+
+# 3. Проверьте, что пользователь создан (несмотря на ошибку уведомления)
+curl http://localhost:8000/users/
+
+# 4. Проверьте логи retry
+docker-compose logs user_service --tail=15
+
+
+# 5. Тестирование Email Worker с искусственной ошибкой
+```bash
+# Сообщение с "fail" в email вызовет искусственную ошибку для демонстрации retry
+curl -X POST http://localhost:8001/notify \
+  -H "Content-Type: application/json" \
+  -d '{"email": "fail_retry_test@example.com", "message": "Testing retry"}'
+```
+
+5. Проверка здоровья системы
+```bash
+# Все сервисы должны отвечать
+curl http://localhost:8000/health
+curl http://localhost:8001/health
+```
+
+6. Интеграционные тесты
+```bash
+# Тест создания пользователя и проверки, что он сохранен
+curl -X POST http://localhost:8000/users/ \
+  -H "Content-Type: application/json" \
+  -d '{"email": "integration_test@example.com", "name": "Integration Test"}'
+  
+sleep 2
+curl http://localhost:8000/users/ | grep -i "integration_test"
+```
+
 # Поиск и устранение неисправностей
 Проблема	Решение
 Ошибка портов	Убедитесь, что порты 8000, 8001, 15672 свободны
@@ -275,6 +411,49 @@ Consumers (должен быть 1)
 
 Messages (количество сообщений в очереди)
 
+### Мониторинг механизма Retry
+
+1. **Логи User Service при retry:**
+   ```bash
+   docker-compose logs user_service --tail=20
+   ```
+   Ищите сообщения: "Попытка X/3", "Жду X сек.", "Достигнут лимит"
+
+2. **Логи Email Worker при retry:**
+   ```bash
+   docker-compose logs email_worker --tail=30
+   ```
+   Ищите сообщения: "[ПОПЫТКА X/3]", "Жду X сек.", "Достигнут лимит"
+
+3. **RabbitMQ для наблюдения за повторно отправляемыми сообщениями:**
+   - Откройте: http://localhost:15672
+   - Очередь `email_queue` показывает:
+     - **Ready:** Сообщения, ожидающие обработки
+     - **Unacked:** Сообщения, взятые worker'ом
+
+### Особенности и принятые решения
+
+1. **Механизм Retry:**
+   - Реализован вручную (без сторонних библиотек) для большей прозрачности
+   - Экспоненциальная задержка предотвращает перегрузку системы
+   - Разные стратегии для разных типов ошибок
+   - Детальное логирование каждой попытки
+
+2. **Обработка ошибок:**
+   - User Service: продолжает работу даже при недоступности Notification Service
+   - Email Worker: не зацикливается на неисправимых ошибках (невалидный JSON)
+   - Все ошибки логируются с контекстом для отладки
+
+3. **Асинхронность:**
+   - Уведомления отправляются асинхронно, не блокируя ответ клиенту
+   - Использование `asyncio.create_task` для фоновых задач
+   - Обработка результатов фоновых задач с callback'ами
+
+4. **Надёжность:**
+   - Очереди RabbitMQ сохраняются при перезагрузке (durable=True)
+   - Health checks в docker-compose.yml
+   - Автоматические повторные подключения к RabbitMQ
+   
 # Docker контейнеры
 ```bash
 # Статус всех контейнеров
