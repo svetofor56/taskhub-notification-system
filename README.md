@@ -149,6 +149,79 @@ taskhub-notification-system/
 
 └── test_full_chain.py # Тестовый скрипт Python
 
+# Примеры использования
+
+**Создание пользователя**
+```bash
+curl -X POST http://localhost:8000/users/ \
+  -H "Content-Type: application/json" \
+  -d '{"email": "test@example.com", "name": "Test User"}'
+```
+**Отправка письма**
+```
+curl -X POST http://localhost:8001/notify \
+   -H "Content-Type: application/json" \
+   -d '{"email": "test@example.com", "message": "Test message"}'
+```
+
+## Механизм повторных попыток (Retry)
+
+Реализовано в двух местах:
+
+Система реализует надежный механизм повторных попыток при сбоях:
+
+**В двух местах системы:**
+
+#### **User Service → Notification Service:**
+- **Лимит попыток:** 3
+- **Стратегия задержки:** Экспоненциальная (2, 4, 8 секунд)
+- **Триггер:** Ошибки HTTP или недоступность сервиса
+- **Реализация:** Цикл с обработкой исключений
+
+#### **Email Worker → Обработка сообщений:**
+- **Лимит попыток:** 3
+- **Стратегия задержки:** Экспоненциальная (2, 4, 8 секунд)
+- **Триггер:** Любые ошибки при обработке сообщений
+- **Особенность:** Искусственная ошибка при email с "fail" (для демонстрации)
+
+### Демонстрация механизма Retry
+
+#### Тест 1: Retry при недоступности Notification Service
+```bash
+# Остановите notification_service
+docker-compose stop notification_service
+
+# Создайте пользователя (увидите 3 попытки в логах)
+curl -X POST http://localhost:8000/users/ \
+  -H "Content-Type: application/json" \
+  -d '{"email": "retry_test@example.com", "name": "Test Retry"}'
+
+# Наблюдайте логи retry
+docker-compose logs -f user_service
+```
+
+#### Тест 2: Retry в Email Worker
+```bash
+# Отправьте тестовое сообщение с "fail" в email
+curl -X POST http://localhost:8001/notify \
+  -H "Content-Type: application/json" \
+  -d '{"email": "fail_test@example.com", "message": "Тест retry механизма"}'
+
+# Наблюдайте 3 попытки обработки
+docker-compose logs -f email_worker
+```
+# Ожидаемые логи retry:
+```text
+📤 [USER SERVICE] Попытка 1/3 отправки уведомления...
+❌ [USER SERVICE] Ошибка подключения при попытке 1
+⏱️  [USER SERVICE] Жду 2 сек. перед повторной попыткой...
+📤 [USER SERVICE] Попытка 2/3 отправки уведомления...
+❌ [USER SERVICE] Ошибка подключения при попытке 2
+⏱️  [USER SERVICE] Жду 4 сек. перед повторной попыткой...
+📤 [USER SERVICE] Попытка 3/3 отправки уведомления...
+❌ [USER SERVICE] Ошибка подключения при попытке 3
+🚫 [USER SERVICE] Достигнут лимит 3 попыток
+```
 
 ## Быстрый старт
 
@@ -238,65 +311,6 @@ Content-Type: application/json
     "email": "user@example.com",
     "message": "Текст уведомления"
 }
-```
-
-## Механизм повторных попыток (Retry)
-
-### Реализовано в двух местах:
-
-Система реализует надежный механизм повторных попыток при сбоях:
-
-### **В двух местах системы:**
-
-#### **User Service → Notification Service:**
-- **Лимит попыток:** 3
-- **Стратегия задержки:** Экспоненциальная (2, 4, 8 секунд)
-- **Триггер:** Ошибки HTTP или недоступность сервиса
-- **Реализация:** Цикл с обработкой исключений
-
-#### **Email Worker → Обработка сообщений:**
-- **Лимит попыток:** 3
-- **Стратегия задержки:** Экспоненциальная (2, 4, 8 секунд)
-- **Триггер:** Любые ошибки при обработке сообщений
-- **Особенность:** Искусственная ошибка при email с "fail" (для демонстрации)
-
-### Демонстрация механизма Retry
-
-#### Тест 1: Retry при недоступности Notification Service
-```bash
-# Остановите notification_service
-docker-compose stop notification_service
-
-# Создайте пользователя (увидите 3 попытки в логах)
-curl -X POST http://localhost:8000/users/ \
-  -H "Content-Type: application/json" \
-  -d '{"email": "retry_test@example.com", "name": "Test Retry"}'
-
-# Наблюдайте логи retry
-docker-compose logs -f user_service
-```
-
-#### Тест 2: Retry в Email Worker
-```bash
-# Отправьте тестовое сообщение с "fail" в email
-curl -X POST http://localhost:8001/notify \
-  -H "Content-Type: application/json" \
-  -d '{"email": "fail_test@example.com", "message": "Тест retry механизма"}'
-
-# Наблюдайте 3 попытки обработки
-docker-compose logs -f email_worker
-```
-# Ожидаемые логи retry:
-```text
-📤 [USER SERVICE] Попытка 1/3 отправки уведомления...
-❌ [USER SERVICE] Ошибка подключения при попытке 1
-⏱️  [USER SERVICE] Жду 2 сек. перед повторной попыткой...
-📤 [USER SERVICE] Попытка 2/3 отправки уведомления...
-❌ [USER SERVICE] Ошибка подключения при попытке 2
-⏱️  [USER SERVICE] Жду 4 сек. перед повторной попыткой...
-📤 [USER SERVICE] Попытка 3/3 отправки уведомления...
-❌ [USER SERVICE] Ошибка подключения при попытке 3
-🚫 [USER SERVICE] Достигнут лимит 3 попыток
 ```
 
 # Тестирование
@@ -534,35 +548,41 @@ uvicorn app.main:app --reload --port 8000
 
 
 # Компоненты системы
-1. User Service (порт 8000)
+
+**1. User Service (порт 8000)**
+
 REST API на FastAPI
 
 Работа с PostgreSQL
 
 Валидация данных через Pydantic
 
-2. Notification Service (порт 8001)
+**2. Notification Service (порт 8001)**
+
 Прием HTTP запросов
 
 Отправка сообщений в RabbitMQ
 
 Асинхронная обработка
 
-3. Email Worker
+**3. Email Worker**
+
 Фоновый процесс
 
 Чтение сообщений из очереди
 
 Имитация отправки email
 
-4. RabbitMQ
+**4. RabbitMQ**
+
 Message Broker
 
 Очередь email_queue
 
 Веб-интерфейс на порту 15672
 
-5. PostgreSQL
+**5. PostgreSQL**
+
 Реляционная база данных
 
 Хранение информации о пользователях
