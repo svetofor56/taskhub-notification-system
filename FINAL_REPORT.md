@@ -56,5 +56,9 @@ curl http://localhost:8000/users/
 
 5) Проверка отправки сообщения: ![Проверка отправки сообщения](docs/msgsent.jpg)
 
+6) Механизм повторных попыток (retry) для Email Worker: ![Механизм повторных попыток (retry) для Email Worker](docs/retryemail.jpg)
+
+7) Механизм повторных попыток (retry) для User Service: ![Механизм повторных попыток (retry) для User Service](docs/retryuser.jpg)
+
 ## 5. Заключение
 Система успешно реализована и готова к использованию.
