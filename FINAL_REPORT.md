@@ -46,15 +46,15 @@ curl http://localhost:8000/users/
 ```
 
 ## 4. Примеры работы
-![Оповещение при запуске системы](docs/sysstart.jpg)
+1) Оповещение при запуске системы: ![Оповещение при запуске системы](docs/sysstart.jpg)
 
-![Проверка работоспособности User Service](docs/userservhealth.jpg)
+2) Проверка работоспособности User Service: ![Проверка работоспособности User Service](docs/userservhealth.jpg)
 
-![Проверка работоспособности Notification Service](docs/notservhealth.jpg)
+3) Проверка работоспособности Notification Service: ![Проверка работоспособности Notification Service](docs/notservhealth.jpg)
 
-![Проверка системы регистрации пользователя](docs/userreg.jpg)
+4) Проверка системы регистрации пользователя: ![Проверка системы регистрации пользователя](docs/userreg.jpg)
 
-![Проверка отправки сообщения](docs/msgsent.jpg)
+5) Проверка отправки сообщения: ![Проверка отправки сообщения](docs/msgsent.jpg)
 
 ## 5. Заключение
 Система успешно реализована и готова к использованию.
