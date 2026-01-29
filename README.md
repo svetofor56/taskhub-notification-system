@@ -404,12 +404,16 @@ curl http://localhost:8000/users/ | grep -i "integration_test"
 ```
 
 # Поиск и устранение неисправностей
-Проблема	Решение
-Ошибка портов	Убедитесь, что порты 8000, 8001, 15672 свободны
-RabbitMQ не подключается	Проверьте docker-compose logs rabbitmq
-PostgreSQL недоступен	Подождите 10-15 секунд после запуска
-Нет логов email_worker	Проверьте буферизацию: в Dockerfile добавьте -u к python
-422 ошибка в Postman	Проверьте заголовок Content-Type: application/json
+
+*Проблема:* Ошибка портов. *Решение:* Убедитесь, что порты 8000, 8001, 15672 свободны
+
+*Проблема:* RabbitMQ не подключается. *Решение:* Проверьте docker-compose logs rabbitmq
+
+*Проблема:* PostgreSQL недоступен.	*Решение:* Подождите 10-15 секунд после запуска
+
+*Проблема:* Нет логов email_worker.	*Решение:* Проверьте буферизацию: в Dockerfile добавьте -u к python
+
+*Проблема:* 422 ошибка в Postman.	*Решение:* Проверьте заголовок Content-Type: application/json
 
 # Мониторинг
 RabbitMQ Management
