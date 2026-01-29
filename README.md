@@ -234,7 +234,7 @@ docker-compose logs -f email_worker
 
 ```bash
 # 1. Клонируйте репозиторий
-git clone <ваш-репозиторий>
+git clone https://github.com/svetofor56/taskhub-notification-system
 cd taskhub-notification-system
 
 # 2. Запустите все сервисы
