@@ -210,7 +210,7 @@ curl -X POST http://localhost:8001/notify \
 # Наблюдайте 3 попытки обработки
 docker-compose logs -f email_worker
 ```
-*Ожидаемые логи retry:*
+#### Ожидаемые логи retry:
 ```text
 📤 [USER SERVICE] Попытка 1/3 отправки уведомления...
 ❌ [USER SERVICE] Ошибка подключения при попытке 1
